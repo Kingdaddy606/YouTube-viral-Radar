@@ -1,5 +1,5 @@
 
-name: YouTube Viral Radar Android Build
+name: YouTube Viral Radar Topic Fix Build
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Android APK
+    name: Build Topic Fix APK
     runs-on: ubuntu-latest
 
     steps:
@@ -37,31 +37,22 @@ jobs:
 
       - name: Extract Android project
         run: |
-          if [ ! -f YouTube_Viral_Radar_Source.zip ]; then
-            echo "Project ZIP not found in repository root."
-            exit 1
-          fi
+          unzip -q YouTube_Viral_Radar_Topic_Fix.zip -d project
 
-          mkdir -p project
-          unzip -q YouTube_Viral_Radar_Source.zip -d project
-
-          if [ ! -f project/YouTube_Viral_Radar_Source/settings.gradle.kts ]; then
-            echo "Android project files were not found."
-            exit 1
-          fi
+          test -f project/YouTube_Viral_Radar_Source/settings.gradle.kts
 
       - name: Test backend
         working-directory: project/YouTube_Viral_Radar_Source/backend
         run: node --test
 
-      - name: Build debug APK
+      - name: Build APK
         working-directory: project/YouTube_Viral_Radar_Source
         run: gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: YouTube-Viral-Radar-APK
+          name: YouTube-Viral-Radar-Topic-Fix-APK
           path: project/YouTube_Viral_Radar_Source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
