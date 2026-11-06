@@ -1,3 +1,4 @@
+
 name: YouTube Viral Radar Android Build
 
 on:
@@ -49,7 +50,7 @@ jobs:
             exit 1
           fi
 
-      - name: Test backend scoring
+      - name: Test backend
         working-directory: project/YouTube_Viral_Radar_Source/backend
         run: node --test
 
@@ -64,3 +65,4 @@ jobs:
           path: project/YouTube_Viral_Radar_Source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+          
