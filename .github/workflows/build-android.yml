@@ -1,20 +1,21 @@
-
-name: Android build
+name: YouTube Viral Radar Android Build
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Java 17
@@ -23,77 +24,43 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
+      - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Extract Android source ZIP
-        shell: bash
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Extract Android project
         run: |
-          if [ ! -f "YouTube_Viral_Radar_Source.zip" ]; then
-            echo "ERROR: Source ZIP not found."
-            ls -la
+          if [ ! -f YouTube_Viral_Radar_Source.zip ]; then
+            echo "Project ZIP not found in repository root."
             exit 1
           fi
 
-          mkdir -p extracted
-          unzip -oq YouTube_Viral_Radar_Source.zip -d extracted
+          mkdir -p project
+          unzip -q YouTube_Viral_Radar_Source.zip -d project
 
-          echo "Extracted files:"
-          find extracted -maxdepth 3 -type f | head -50
-
-      - name: Locate Android project
-        shell: bash
-        run: |
-          PROJECT="extracted/YouTube_Viral_Radar_Source"
-
-          if [ ! -f "$PROJECT/settings.gradle.kts" ]; then
-            echo "ERROR: Gradle settings file not found."
-            find extracted -name settings.gradle.kts
+          if [ ! -f project/YouTube_Viral_Radar_Source/settings.gradle.kts ]; then
+            echo "Android project files were not found."
             exit 1
           fi
 
-          if [ ! -f "$PROJECT/app/build.gradle.kts" ]; then
-            echo "ERROR: App Gradle file not found."
-            exit 1
-          fi
-
-          echo "PROJECT_DIR=$PROJECT" >> "$GITHUB_ENV"
-
-      - name: Install Android SDK packages
-        shell: bash
-        run: |
-          echo "Android SDK: $ANDROID_HOME"
-
-          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" \
-            -type f -name sdkmanager | head -n 1)
-
-          if [ -z "$SDKMANAGER" ]; then
-            echo "ERROR: Android SDK manager not found."
-            exit 1
-          fi
-
-          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
-
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+      - name: Test backend scoring
+        working-directory: project/YouTube_Viral_Radar_Source/backend
+        run: node --test
 
       - name: Build debug APK
-        working-directory: ${{ github.workspace }}/extracted/YouTube_Viral_Radar_Source
-        run: gradle --no-daemon :app:assembleDebug
+        working-directory: project/YouTube_Viral_Radar_Source
+        run: gradle assembleDebug --no-daemon
 
-      - name: Run unit tests
-        working-directory: ${{ github.workspace }}/extracted/YouTube_Viral_Radar_Source
-        run: gradle --no-daemon :app:testDebugUnitTest
-
-      - name: Upload debug APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: youtube-viral-radar-debug-apk
-          path: extracted/YouTube_Viral_Radar_Source/app/build/outputs/apk/debug/*.apk
+          name: YouTube-Viral-Radar-APK
+          path: project/YouTube_Viral_Radar_Source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
-          
