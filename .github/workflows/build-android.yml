@@ -1,3 +1,4 @@
+
 name: Android build
 
 on:
@@ -5,12 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: YouTube_Viral_Radar_Source
 
     steps:
       - name: Check out repository
@@ -26,18 +27,44 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-          build-root-directory: YouTube_Viral_Radar_Source
+
+      - name: Locate Android project
+        shell: bash
+        run: |
+          if [ -f "settings.gradle.kts" ] && [ -f "app/build.gradle.kts" ]; then
+            echo "PROJECT_DIR=." >> "$GITHUB_ENV"
+            echo "Android project found in repository root."
+          elif [ -f "YouTube_Viral_Radar_Source/settings.gradle.kts" ] && [ -f "YouTube_Viral_Radar_Source/app/build.gradle.kts" ]; then
+            echo "PROJECT_DIR=YouTube_Viral_Radar_Source" >> "$GITHUB_ENV"
+            echo "Android project found in YouTube_Viral_Radar_Source."
+          else
+            echo "ERROR: Android Gradle project files were not found."
+            echo "Repository contents:"
+            ls -la
+            find . -maxdepth 3 \( -name settings.gradle.kts -o -name build.gradle.kts \)
+            exit 1
+          fi
+
+      - name: Verify Android project
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          test -f settings.gradle.kts
+          test -f build.gradle.kts
+          test -f app/build.gradle.kts
 
       - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Run unit tests
+        working-directory: ${{ env.PROJECT_DIR }}
         run: gradle --no-daemon :app:testDebugUnitTest
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: youtube-viral-radar-debug-apk
-          path: YouTube_Viral_Radar_Source/app/build/outputs/apk/debug/*.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 14
           
