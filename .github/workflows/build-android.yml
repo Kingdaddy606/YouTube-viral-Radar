@@ -23,9 +23,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -35,15 +32,15 @@ jobs:
         shell: bash
         run: |
           if [ ! -f "YouTube_Viral_Radar_Source.zip" ]; then
-            echo "ERROR: Source ZIP not found in repository root."
+            echo "ERROR: Source ZIP not found."
             ls -la
             exit 1
           fi
 
           mkdir -p extracted
-          unzip -q YouTube_Viral_Radar_Source.zip -d extracted
+          unzip -oq YouTube_Viral_Radar_Source.zip -d extracted
 
-          echo "Extracted project files:"
+          echo "Extracted files:"
           find extracted -maxdepth 3 -type f | head -50
 
       - name: Locate Android project
@@ -52,17 +49,37 @@ jobs:
           PROJECT="extracted/YouTube_Viral_Radar_Source"
 
           if [ ! -f "$PROJECT/settings.gradle.kts" ]; then
-            echo "ERROR: settings.gradle.kts not found."
+            echo "ERROR: Gradle settings file not found."
             find extracted -name settings.gradle.kts
             exit 1
           fi
 
           if [ ! -f "$PROJECT/app/build.gradle.kts" ]; then
-            echo "ERROR: app/build.gradle.kts not found."
+            echo "ERROR: App Gradle file not found."
             exit 1
           fi
 
           echo "PROJECT_DIR=$PROJECT" >> "$GITHUB_ENV"
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          echo "Android SDK: $ANDROID_HOME"
+
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" \
+            -type f -name sdkmanager | head -n 1)
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "ERROR: Android SDK manager not found."
+            exit 1
+          fi
+
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
+
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Build debug APK
         working-directory: ${{ github.workspace }}/extracted/YouTube_Viral_Radar_Source
