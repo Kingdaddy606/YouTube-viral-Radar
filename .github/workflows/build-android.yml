@@ -1,17 +1,43 @@
 name: Android build
-on: [push, pull_request, workflow_dispatch]
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: YouTube_Viral_Radar_Source
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17', cache: gradle }
-      - uses: gradle/actions/setup-gradle@v4
-        with: { gradle-version: 8.9 }
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          build-root-directory: YouTube_Viral_Radar_Source
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
+
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
-      - uses: actions/upload-artifact@v4
-        with: { name: youtube-viral-radar-debug-apk, path: app/build/outputs/apk/debug/*.apk, if-no-files-found: error }
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-viral-radar-debug-apk
+          path: YouTube_Viral_Radar_Source/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          
